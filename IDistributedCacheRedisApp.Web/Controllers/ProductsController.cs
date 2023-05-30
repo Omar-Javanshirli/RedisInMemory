@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using IDistributedCacheRedisApp.Web.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace IDistributedCacheRedisApp.Web.Controllers
@@ -16,25 +19,67 @@ namespace IDistributedCacheRedisApp.Web.Controllers
             this.distributedCache = distributedCache;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             DistributedCacheEntryOptions cacheOptions = new DistributedCacheEntryOptions();
             cacheOptions.AbsoluteExpiration = DateTime.Now.AddMinutes(1);
 
-            this.distributedCache.SetString("name", "Leyla", cacheOptions);
+            await this.distributedCache.SetStringAsync("name", "Leyla", cacheOptions)!;
             return View();
         }
 
-        public  IActionResult Show()
+        public async Task<IActionResult> JsonProductSerialize()
         {
-            var name =  this.distributedCache.GetString("name");
+            DistributedCacheEntryOptions cacheOptions = new DistributedCacheEntryOptions();
+            cacheOptions.AbsoluteExpiration = DateTime.Now.AddMinutes(1);
+
+            Product product = new Product { Id = 1, Name = "Pencil", Price = 10 };
+            string jsonProduct = JsonConvert.SerializeObject(product);
+            await this.distributedCache.SetStringAsync("product:1", jsonProduct,cacheOptions)!;
+            return View();
+        }
+
+        public async Task<IActionResult> ShowJsonProductSerialize()
+        {
+            string jsonProduct = await this.distributedCache.GetStringAsync("product:1");
+            Product p=JsonConvert.DeserializeObject<Product>(jsonProduct);
+            ViewBag.Product = p;
+            return View();
+        }
+
+        public async Task<IActionResult> ProductSerializeByBinary()
+        {
+            DistributedCacheEntryOptions cacheOptions = new DistributedCacheEntryOptions();
+            cacheOptions.AbsoluteExpiration = DateTime.Now.AddMinutes(1);
+
+            Product product = new Product { Id = 1, Name = "Pencil", Price = 10 };
+            string jsonProduct = JsonConvert.SerializeObject(product);
+
+            Byte[] byteProduct = Encoding.UTF8.GetBytes(jsonProduct);
+            await this.distributedCache.SetAsync("product:1", byteProduct)!;
+
+            return View();
+        }
+
+        public async Task<IActionResult> ShowProductSerializeByBinariy()
+        {
+            Byte[] byteProduct =await this.distributedCache.GetAsync("product:1");
+            string jsonProduct =Encoding.UTF8.GetString(byteProduct);
+            
+            Product p= JsonConvert.DeserializeObject<Product>(jsonProduct);
+            ViewBag.Product = p;
+            return View();
+        }
+        public async Task<IActionResult> Show()
+        {
+            var name = await this.distributedCache.GetStringAsync("name");
             ViewBag.Name = name;
             return View();
         }
 
-        public IActionResult Remove()
+        public async Task<IActionResult> Remove()
         {
-            this.distributedCache.Remove("name");
+            await this.distributedCache.RemoveAsync("name");
             return View();
         }
     }
