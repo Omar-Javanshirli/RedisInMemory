@@ -25,6 +25,12 @@ namespace RedisExchangeAPI.Web.Controllers
             HashSet<string> animals = new HashSet<string>();
             if (this.db.KeyExists(listkey))
             {
+                //Kiciyden boyuye dogru siralama
+                //this.db.SortedSetRangeByRank(listkey, order: Order.Ascending).ToList().ForEach(x =>
+                //{
+                //    animals.Add(x.ToString());
+                //});
+
                 this.db.SortedSetScan(listkey).ToList().ForEach(x =>
                 {
                     animals.Add(x.ToString());
@@ -37,9 +43,8 @@ namespace RedisExchangeAPI.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(string name, int score)
         {
-            await this.db.KeyExpireAsync(listkey, DateTime.Now.AddMinutes(1));
             await this.db.SortedSetAddAsync(listkey, name, score);
-
+            await this.db.KeyExpireAsync(listkey, DateTime.Now.AddMinutes(1));
             return RedirectToAction(nameof(Index));
         }
 
